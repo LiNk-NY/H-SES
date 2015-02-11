@@ -37,6 +37,8 @@ getNHISdata <- (start = 1986, end = 2004, todir = NULL, docs = FALSE) {
         # simple check for valid years
         if(start < 1986 | end > 2004){
                 stop("Year outside of collection boundary")
+        } else {
+                listFiles <- 
         }
 }
 
