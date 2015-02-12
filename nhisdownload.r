@@ -15,6 +15,10 @@ todir <- getwd()
 
 getNHISdata <- (start = 1986, end = 2004, todir = NULL, docs = FALSE) {
         linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
+        listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+        datFiles <- lapply(strsplit(listFiles, "[\\r]", perl=TRUE), function(x){
+                gsub("\\n", "", x) })
+        datFiles <- unlist(lapply(datFiles, function(x){grep("NHIS", x, value=TRUE)}))
         # check directory path and create if non-existent
         if(!is.null(todir)){
                 if(!class(todir)=="character"){
@@ -38,8 +42,19 @@ getNHISdata <- (start = 1986, end = 2004, todir = NULL, docs = FALSE) {
         if(start < 1986 | end > 2004){
                 stop("Year outside of collection boundary")
         } else {
-                listFiles <- 
+                if(start)
+               }
         }
 }
-
-
+# to work  on
+substr(start, 3,4)
+substr(end, 3,4)
+if(end > 2000){
+        start:99 & 00:end
+}else if(end < 2000){
+        start:end
+}else if(end == 2000)
+        start:99 & end
+        
+grep("[86-99]", datFiles, perl=TRUE, value=TRUE)
+grep("[^9][0-4]_", datFiles, perl=TRUE, value=TRUE)
