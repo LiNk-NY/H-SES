@@ -1,6 +1,6 @@
 # National Health Interview Survey download script
 
-# Load depfinishencies
+# Load dependencies
 library(RCurl)
 library(SAScii)
 library(foreign)
