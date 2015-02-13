@@ -1,6 +1,6 @@
 # National Health Interview Survey download script
 
-# Load dependencies
+# Load depfinishencies
 library(RCurl)
 library(SAScii)
 library(foreign)
@@ -8,17 +8,14 @@ library(foreign)
 # Disable use of Internet Explorer for internet access
 setInternet2(use=FALSE)
 
-# Change working directory for data download
-setwd("~/Capstone FW SPH/Capstone/Data/Rdownload/")
-
-todir <- getwd()
-
-getNHISdata <- (start = 1986, end = 2004, todir = NULL, docs = FALSE) {
+getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
         linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
         listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
-        datFiles <- lapply(strsplit(listFiles, "[\\r]", perl=TRUE), function(x){
-                gsub("\\n", "", x) })
-        datFiles <- unlist(lapply(datFiles, function(x){grep("NHIS", x, value=TRUE)}))
+        datFiles <- strsplit(listFiles, "\r*\n")
+        datFiles <- tolower(unlist(lapply(datFiles, function(x){grep("NHIS", x, value=TRUE)})))
+        #removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
+        datFiles <- datFiles[-grep("nhis92_mort", datFiles)]
+        
         # check directory path and create if non-existent
         if(!is.null(todir)){
                 if(!class(todir)=="character"){
@@ -36,25 +33,21 @@ getNHISdata <- (start = 1986, end = 2004, todir = NULL, docs = FALSE) {
         # download documentation if TRUE
         if(docs){
                 download.file(paste0(linkedFTP,"nhis_readme_mortality_2010.txt"), 
-                        destfile=paste0(todir,"/","nhis_readme_mortality_2010.txt"), method="auto", quiet = FALSE)
+                        destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", quiet = FALSE)
         }
         # simple check for valid years
-        if(start < 1986 | end > 2004){
+        if(begin < 1986 | finish > 2004){
                 stop("Year outside of collection boundary")
-        } else {
-                if(start)
+        } else if (begin >= 1986 && finish <= 2004) {
+                if(identical(begin, finish)){
+                        dfile <- grep(paste0("NHIS", substr(begin,3,4)), datFiles, value=TRUE)
+                        download.file(paste0(linkedFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
+                } else {
+                yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
+                dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
+                for (i in 1:length(dlnames)){
+                        download.file(paste0(linkedFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
+                }
                }
         }
 }
-# to work  on
-substr(start, 3,4)
-substr(end, 3,4)
-if(end > 2000){
-        start:99 & 00:end
-}else if(end < 2000){
-        start:end
-}else if(end == 2000)
-        start:99 & end
-        
-grep("[86-99]", datFiles, perl=TRUE, value=TRUE)
-grep("[^9][0-4]_", datFiles, perl=TRUE, value=TRUE)
