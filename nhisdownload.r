@@ -9,6 +9,11 @@ library(foreign)
 setInternet2(use=FALSE)
 
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
+        if(!is.numeric(begin)|!is.numeric(finish)){
+                stop("Survey years must be four digit numbers!")
+        } else if(begin < 1986 | finish > 2004){
+                        stop("Years outside of survey collection period!")
+                }
         linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
         listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
         datFiles <- strsplit(listFiles, "\r*\n")
@@ -36,10 +41,7 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
                         destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", quiet = FALSE)
         }
         # simple check for valid years
-        if(begin < 1986 | finish > 2004){
-                stop("Year outside of collection boundary")
-        } else if (begin >= 1986 && finish <= 2004) {
-                if(identical(begin, finish)){
+        if(identical(begin, finish)){
                         dfile <- grep(paste0("NHIS", substr(begin,3,4)), datFiles, value=TRUE)
                         download.file(paste0(linkedFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
                 } else {
@@ -49,5 +51,4 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
                         download.file(paste0(linkedFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
                 }
                }
-        }
 }
