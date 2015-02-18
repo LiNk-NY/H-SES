@@ -18,7 +18,7 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
         linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
         listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
         listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-        datFiles <- tolower(unlist(lapply(datFiles, function(x){grep("NHIS", x, value=TRUE)})))
+        datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
         #removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
         datFiles <- datFiles[-grep("nhis92_mort", datFiles)]
         
@@ -53,14 +53,15 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
                 }
                }
 }
-
-procNHIS <- function(fromdir= todir, ){
-        sasFile <- tolower(listFiles[grep("nhis_sample_ascii", listFiles)])
-        sasciistart <- grep("INPUT ALL VARIABLES", readLInes(paste0(linkedFTP, sasFile))) + 1
+# read sample file
+procNHIS <- function(fromdir = todir){
+        sasFile <- listFiles[grep("nhis_sample_ascii", listFiles, ignore.case=TRUE)]
+        sasciistart <- grep("INPUT ALL VARIABLES", readLines(paste0(linkedFTP, sasFile))) + 1
+        mdat <- read.SAScii(file.path(fromdir, "nhis00_mort_public_use_2010.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
+        mdat <- subset(mdat, eligstat == 1)
         
-        read.SAScii(file.path(todir, "nhis00_mort_public_use_2010.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
 }
 
 
-
+dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS"
 
