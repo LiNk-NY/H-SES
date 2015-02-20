@@ -58,10 +58,14 @@ procNHIS <- function(fromdir = todir){
         sasFile <- listFiles[grep("nhis_sample_ascii", listFiles, ignore.case=TRUE)]
         sasciistart <- grep("INPUT ALL VARIABLES", readLines(paste0(linkedFTP, sasFile))) + 1
         mdat <- read.SAScii(file.path(fromdir, "nhis00_mort_public_use_2010.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
-        mdat <- subset(mdat, eligstat == 1)
+        names(mdat) <- tolower(names(mdat))
+        md <- subset(mdat, eligstat == 1)
         
 }
 
 
-dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS"
-
+dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
+yrs1 <- substr(yrs, 1,2)
+dataFiles1 <- sapply(yrs1, function(x) {grep(x, dataFiles, fixed=TRUE)})
