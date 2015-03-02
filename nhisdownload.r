@@ -9,19 +9,21 @@ library(data.table)
 # Disable use of Internet Explorer for internet access
 setInternet2(use=FALSE)
 
+linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
+listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+listFiles <- unlist(strsplit(listFiles, "\r*\n"))
+datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
+#removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
+datFiles <- datFiles[-grep("nhis92_mort", datFiles)]
+yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
+dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
+
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
         if(!is.numeric(begin)|!is.numeric(finish)){
                 stop("Survey years must be four digit numbers!")
         } else if(begin < 1986 | finish > 2004){
                         stop("Years outside of survey collection period!")
                 }
-        linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
-        listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
-        listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-        datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
-        #removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
-        datFiles <- datFiles[-grep("nhis92_mort", datFiles)]
-        
         # check directory path and create if non-existent
         if(!is.null(todir)){
                 if(!class(todir)=="character"){
@@ -46,8 +48,6 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
                         dfile <- grep(paste0("NHIS", substr(begin,3,4)), datFiles, value=TRUE)
                         download.file(paste0(linkedFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
                 } else {
-                yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
-                dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
                 for (i in 1:length(dlnames)){
                         download.file(paste0(linkedFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
                 }
@@ -69,3 +69,8 @@ dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
 yrs1 <- substr(yrs, 1,2)
 dataFiles1 <- sapply(yrs1, function(x) {grep(x, dataFiles, fixed=TRUE)})
+
+imps <- substr(grep("imputed", dataFiles, value=T), 3,4)
+subimp <- imps[imps %in% yrs1]
+
+
