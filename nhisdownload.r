@@ -13,9 +13,10 @@ linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mo
 listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 listFiles <- unlist(strsplit(listFiles, "\r*\n"))
 datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
-#removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
-datFiles <- datFiles[-grep("nhis92_mort", datFiles)]
-yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
+# removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
+# datFiles <- datFiles[!grepl("nhis92_mort", datFiles)]
+# yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
+yrs <- seq(begin, finish, by=1)
 dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
@@ -32,32 +33,29 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
                         cat("Directory does not exist >> creating one...")
                         dir.create(todir, recursive=TRUE)
                 }
-                if(!grepl("\\/$", todir)){
-                        todir <- paste(todir,"/",sep="")
-                }
-        } else {
-                todir <- getwd()
-                }
+                
+        } else { todir <- getwd() }
         # download documentation if TRUE
         if(docs){
-                download.file(paste0(linkedFTP,"nhis_readme_mortality_2010.txt"), 
+                download.file(paste0(linkedFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
                         destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
         }
         # simple check for valid years
         if(identical(begin, finish)){
-                        dfile <- grep(paste0("NHIS", substr(begin,3,4)), datFiles, value=TRUE)
+                        dfile <- grep(begin, datFiles, value=TRUE)
                         download.file(paste0(linkedFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
                 } else {
                 for (i in 1:length(dlnames)){
                         download.file(paste0(linkedFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
                 }
                }
+        return(todir)
 }
 # read sample file
 procNHIS <- function(fromdir = todir){
-        sasFile <- listFiles[grep("nhis_sample_ascii", listFiles, ignore.case=TRUE)]
-        sasciistart <- grep("INPUT ALL VARIABLES", readLines(paste0(linkedFTP, sasFile))) + 1
-        mdat <- read.SAScii(file.path(fromdir, "nhis00_mort_public_use_2010.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
+        sasFile <- listFiles[grep("sas-read", listFiles, ignore.case=TRUE)]
+        sasciistart <- grep("INPUT VARIABLES", readLines(paste0(linkedFTP, sasFile))) + 1
+        mdat <- read.SAScii(file.path(fromdir, "nhis_2000_mort_2013_public.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
         names(mdat) <- tolower(names(mdat))
         md <- subset(mdat, eligstat == 1)
         
