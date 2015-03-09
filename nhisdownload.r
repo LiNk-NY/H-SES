@@ -16,9 +16,18 @@ datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=T
 # removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
 # datFiles <- datFiles[!grepl("nhis92_mort", datFiles)]
 # yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
-yrs <- seq(begin, finish, by=1)
+yrs <- seq(begin, finish, by=)
 dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
+
+#' Download NHIS data from the CDC FTP site. 
+#' @param begin integer
+#' @param finish integer
+#' @param todir character vector
+#' @param docs logical
+#' @export
+#' @examples
+#' getNHISdata(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
         if(!is.numeric(begin)|!is.numeric(finish)){
                 stop("Survey years must be four digit numbers!")
@@ -65,8 +74,8 @@ procNHIS <- function(fromdir = todir){
 dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
-yrs1 <- substr(yrs, 1,2)
-dataFiles1 <- sapply(yrs1, function(x) {grep(x, dataFiles, fixed=TRUE)})
+dataFiles1 <- sapply(yrs, function(x) {grep(x, dataFiles, fixed=TRUE, value=TRUE)})
+inc <- sapply(dataFiles1, FUN=function(files){ grep("income", files,ignore.case=TRUE, value=TRUE) })
 
 imps <- substr(grep("imputed", dataFiles, value=T), 3,4)
 subimp <- imps[imps %in% yrs1]
