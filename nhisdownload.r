@@ -1,10 +1,13 @@
 # National Health Interview Survey download script
-
+setwd("~/Capstone FW SPH/Capstone/H-SES/")
+fromdir <- "~/Capstone FW SPH/Capstone/data"
+todir <- fromdir
 # Load dependencies
 library(RCurl)
 library(SAScii)
 library(foreign)
 library(data.table)
+library(downloader)
 
 # Disable use of Internet Explorer for internet access
 setInternet2(use=FALSE)
@@ -13,10 +16,9 @@ linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mo
 listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 listFiles <- unlist(strsplit(listFiles, "\r*\n"))
 datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
-# removing unmodified 1992 file due to oversampling of Hispanics in 1992 - MOD file is appropriate
-# datFiles <- datFiles[!grepl("nhis92_mort", datFiles)]
-# yrs <- sapply(seq(begin, finish, by=1), function(x){paste0(substr(x,3,4),"_")})
-yrs <- seq(begin, finish, by=)
+begin <- 1986
+finish <- 2004
+yrs <- seq(begin, finish, 1)
 dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
 
@@ -27,8 +29,9 @@ dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 #' @param docs logical
 #' @export
 #' @examples
-#' getNHISdata(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
-getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
+#' getlinkedNHIS(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
+getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
+        yrs <- seq(begin, finish, by=1)
         if(!is.numeric(begin)|!is.numeric(finish)){
                 stop("Survey years must be four digit numbers!")
         } else if(begin < 1986 | finish > 2004){
@@ -46,7 +49,7 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
         } else { todir <- getwd() }
         # download documentation if TRUE
         if(docs){
-                download.file(paste0(linkedFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
+                download.file(file.path(linkedFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
                         destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
         }
         # simple check for valid years
@@ -61,23 +64,71 @@ getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE)
         return(todir)
 }
 # read sample file
-procNHIS <- function(fromdir = todir){
-        sasFile <- listFiles[grep("sas-read", listFiles, ignore.case=TRUE)]
-        sasciistart <- grep("INPUT VARIABLES", readLines(paste0(linkedFTP, sasFile))) + 1
-        mdat <- read.SAScii(file.path(fromdir, "nhis_2000_mort_2013_public.dat"),paste0(linkedFTP, sasFile), beginline = sasciistart )
-        names(mdat) <- tolower(names(mdat))
-        md <- subset(mdat, eligstat == 1)
+readNHIS <- function(fromdir = todir){
+        #sasFile <- listFiles[grep("sas-read", listFiles, ignore.case=TRUE)]
+        sasprog <- "../H-SES/sasread/nhisreadin.sas"
+        
+        mdat2 <- read.SAScii(file.path(fromdir, "nhis_1999_mort_2013_public.dat"),sasprog, beginline=1)
+        md <- subset(mdat, mdat$ELIGSTAT == 1)
         
 }
 
 
-dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL){
+        dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+
+        for(i in 1:length(yrs))
+        if(yrs[i] %in% 1990:1996){
+                lf <- getURL(paste0(dataNHIS, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
+                lf <- unlist(strsplit(lf, "\r*\n"))
+                lf <- grep("[^\\.txt]$", lf, value=TRUE)
+        }
+inco <- list()
+for( i in 1:length(lf)){
+        cachefile <- file.path(fromdir, grep(paste0(gsub(".zip","",lf[i],ignore.case=TRUE),".dat"), 
+                                             dir(todir), ignore.case=TRUE, value=TRUE))        
+        if(file.exists(cachefile) & file.info(cachefile) > 0){
+        message("Loading downloaded files...")
+        inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
+        } else {
+        download(url=paste0(dataNHIS, "1990-96_Family_Income/", lf[i]), 
+                      destfile = file.path(todir, lf[i]), mode="wb", quiet = FALSE)
+        unzip(file.path(fromdir, lf[i]), exdir=file.path(fromdir))
+        file.remove(file.path(fromdir,lf[i]))
+        inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
+        inco <- lapply(inco, FUN=function(year){ year <- subset(year, year$ELIGSTAT == 1) })                
+                }
+        }
+        
+} # function close
+
+
+
+
+codeLink <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
+nhisyrs <- paste0(codeLink, yrs, "/")
+saslist <- list()
+for (j in 1:length(nhisyrs)){
+saslist[[j]] <- sapply(nhisyrs[j], FUN=function(link){tolower(strsplit(getURL(link, dirlistonly=TRUE), "\r*\n")[[1]])})        
+}
+
+
 dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
 dataFiles1 <- sapply(yrs, function(x) {grep(x, dataFiles, fixed=TRUE, value=TRUE)})
+
 inc <- sapply(dataFiles1, FUN=function(files){ grep("income", files,ignore.case=TRUE, value=TRUE) })
 
 imps <- substr(grep("imputed", dataFiles, value=T), 3,4)
 subimp <- imps[imps %in% yrs1]
 
 
+sasRead <- "../H-SES/sasread/nhisreadin.sas"
+op <- read.SAScii(file.path("~/Capstone FW SPH/Capstone/data", "nhis_2000_mort_2013_public.dat"), sasRead) 
+
+sasRead[2:22]
+
+
+
+# Fend <- grep("N FLAGFMT\\.", readLines(paste0(linkedFTP, sasFile)))
+# incfiles <- grep("[0-9]\\.dat", dir(fromdir), value=TRUE, ignore.case=TRUE)
