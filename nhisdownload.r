@@ -8,18 +8,20 @@ library(SAScii)
 library(foreign)
 library(data.table)
 library(downloader)
-
+# devtools::install_github("hadley/readr")
 # Disable use of Internet Explorer for internet access
 setInternet2(use=FALSE)
 
 linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
 listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
+
+# Files were moved # 
+# datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
 begin <- 1986
 finish <- 2004
 yrs <- seq(begin, finish, 1)
-dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
+# dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
 
 #' Download NHIS data from the CDC FTP site. 
@@ -108,9 +110,30 @@ for( i in 1:length(lf)){
 codeLink <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
 nhisyrs <- paste0(codeLink, yrs, "/")
 saslist <- list()
-for (j in 1:length(nhisyrs)){
-saslist[[j]] <- sapply(nhisyrs[j], FUN=function(link){tolower(strsplit(getURL(link, dirlistonly=TRUE), "\r*\n")[[1]])})        
+for (j in seq(length(nhisyrs)-1)){
+saslist[[j]] <- lapply(nhisyrs[j], FUN=function(link){tolower(strsplit(getURL(link, dirlistonly=TRUE), "\r*\n")[[1]])})        
 }
+lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
+
+getprogsasfiles <- function(address, years, lists=TRUE){
+        links <- paste0(codeLink, years, "/")
+        filelists <- list()
+        for(jj in 1:length(links)){
+        filelists[[jj]] <- lapply(links[jj], FUN = function(link) {tolower(strsplit(getURL(link, dirlistonly=lists), "\r*\n")[[1]])})
+        }
+        return(filelists)
+}
+
+tolower(strsplit(getURL(file.path(codeLink, "2004", unlist(ab[[19]])[1]), dirlistonly=TRUE), "\r*\n")[[1]])
+       
+       c("person", "household", "familyfile")
+sasref <- lapply(saslist, FUN=function(year){grep("\\.sas", year, ignore.case=TRUE, value=TRUE)})
+
+
+
+
+
+
 
 
 dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
@@ -127,8 +150,3 @@ sasRead <- "../H-SES/sasread/nhisreadin.sas"
 op <- read.SAScii(file.path("~/Capstone FW SPH/Capstone/data", "nhis_2000_mort_2013_public.dat"), sasRead) 
 
 sasRead[2:22]
-
-
-
-# Fend <- grep("N FLAGFMT\\.", readLines(paste0(linkedFTP, sasFile)))
-# incfiles <- grep("[0-9]\\.dat", dir(fromdir), value=TRUE, ignore.case=TRUE)
