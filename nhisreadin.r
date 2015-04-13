@@ -1,5 +1,6 @@
 # Loading mortality data from file
 library(SAScii)
+library(readr)
 setwd("~/Capstone FW SPH/Capstone/data/")
 todir <- getwd()
 fromdir <- todir
@@ -8,16 +9,38 @@ begin <- 1986
 finish <- 2004
 yrs <- seq(begin, finish, 1)
 
-readNHIS <- function(fromdir = todir){
+readNHIS <- function(fromdir = NULL){
         sasprog <- "../H-SES/sasread/nhisreadin.sas"
+        sas.import <- readLines(sasprog)
+        sas.import.tf <- tempfile()
+        writeLines(sas.import, con=sas.import.tf)
+        dimensions <- parse.SAScii(sas.import.tf)
+        dimensions <- dimensions[complete.cases(dimensions),]
+        colos <- fwf_widths(dimensions[,2], dimensions[,1])
+        
         mortfiles <- file.path(fromdir, grep("public\\.dat$", dir(), value=TRUE))
         mortdat <- list()
         for (i in 1:length(mortfiles)){
-        mortdat[[i]] <- read.SAScii(mortfiles[i], sasprog, beginline=1)
+        mortdat[[i]] <- read_fwf(mortfiles[i], colos)
         }
         mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
         mortdat3 <- lapply(seq(length(mortdat2)), FUN= function(dataset){ cbind(mortdat2[[dataset]], YEAR = yrs[[dataset]]) })
+        return(mortdat3)
 }
+
+mydata <- readNHIS(todir)
+
+library(data.table)
+mydata2 <- rbindlist(mydata)
+
+# apply manual formats
+
+sasprog <- "../H-SES/sasread/nhisreadin.sas"
+readLines(sasprog)
+
+mydata2$ELIGSTAT <- factor(mydata2$ELIGSTAT, levels=c(1,2,3), labels=c("Eligible", "Under18", "Ineligible"))
+mydata2$MORTSTAT <- factor(mydata2$MORTSTAT, levels=c(0,1), labels=c("Assumed alive", "Assumed deceased"))
+
 
 formatR <- function(data){
         a <- grep("VALUE", readLines(sasprog), value=TRUE)

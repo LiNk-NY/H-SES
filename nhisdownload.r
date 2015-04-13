@@ -76,6 +76,8 @@ readNHIS <- function(fromdir = todir){
 }
 
 
+# NHIS Data ---------------------------------------------------------------
+
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL){
         dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 
@@ -105,36 +107,36 @@ for( i in 1:length(lf)){
 } # function close
 
 
+# SAS Program Files -------------------------------------------------------
 
-
-codeLink <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
-nhisyrs <- paste0(codeLink, yrs, "/")
-saslist <- list()
-for (j in seq(length(nhisyrs)-1)){
-saslist[[j]] <- lapply(nhisyrs[j], FUN=function(link){tolower(strsplit(getURL(link, dirlistonly=TRUE), "\r*\n")[[1]])})        
-}
-lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
-
-getprogsasfiles <- function(address, years, lists=TRUE){
-        links <- paste0(codeLink, years, "/")
+linked <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
+years <- seq(1986,2004)
+getprogsasfiles <- function(linked, years, lists=TRUE){
+        links <- paste0(linked, years, "/")
         filelists <- list()
-        for(jj in 1:length(links)){
-        filelists[[jj]] <- lapply(links[jj], FUN = function(link) {tolower(strsplit(getURL(link, dirlistonly=lists), "\r*\n")[[1]])})
+        for(jj in seq(length(links)-1)){
+        filelists[jj] <- lapply(links[jj], FUN = function(link) {tolower(strsplit(getURL(link, dirlistonly=lists), "\r*\n")[[1]])})
         }
         return(filelists)
 }
 
-tolower(strsplit(getURL(file.path(codeLink, "2004", unlist(ab[[19]])[1]), dirlistonly=TRUE), "\r*\n")[[1]])
-       
-       c("person", "household", "familyfile")
-sasref <- lapply(saslist, FUN=function(year){grep("\\.sas", year, ignore.case=TRUE, value=TRUE)})
+saslist <- getprogsasfiles(linked, years)
+
+saslist2 <- lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
+
+tomatch <- c("person", "health", "household", "family", "samadult", "accessxx")
+saslist3 <- lapply(saslist2, FUN=function(sassy){grep(paste(tomatch, collapse="|"), sassy, value=TRUE, ignore.case=TRUE)})
+
+download(url, destfile, mode="wb", quiet=FALSE)
+
+years <- years[-length(years)]
+sassers <- list()
+for (i in seq(years)) {
+sassers[[i]] <- lapply(saslist3[i], FUN=function(x){ paste0(linked, years[i], "/", saslist3[[i]])})
+}
 
 
-
-
-
-
-
+# Data Files --------------------------------------------------------------
 
 dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
@@ -149,4 +151,3 @@ subimp <- imps[imps %in% yrs1]
 sasRead <- "../H-SES/sasread/nhisreadin.sas"
 op <- read.SAScii(file.path("~/Capstone FW SPH/Capstone/data", "nhis_2000_mort_2013_public.dat"), sasRead) 
 
-sasRead[2:22]
