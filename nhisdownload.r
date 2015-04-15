@@ -127,27 +127,29 @@ saslist2 <- lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE
 tomatch <- c("person", "health", "household", "family", "samadult", "accessxx")
 saslist3 <- lapply(saslist2, FUN=function(sassy){grep(paste(tomatch, collapse="|"), sassy, value=TRUE, ignore.case=TRUE)})
 
-download(url, destfile, mode="wb", quiet=FALSE)
-
+#exclude 2004
 years <- years[-length(years)]
-sassers <- list()
-for (i in seq(years)) {
-sassers[[i]] <- lapply(saslist3[i], FUN=function(x){ paste0(linked, years[i], "/", saslist3[[i]])})
+
+sapply(years, FUN= function(var) {dir.create(file.path(todir, var))})
+
+# downloading files
+for (i in seq(years)){
+lapply(saslist3[[i]], FUN= function(file) { download(paste(linked, years[i], file, sep="/"), destfile=paste(todir, years[i], file, sep="/"), mode="wb", quiet=FALSE)})
 }
+
+
 
 
 # Data Files --------------------------------------------------------------
 
 dataFiles <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 dataFiles <- unlist(strsplit(dataFiles, "\r*\n"))
-dataFiles1 <- sapply(yrs, function(x) {grep(x, dataFiles, fixed=TRUE, value=TRUE)})
+dataFiles1 <- sapply(years, function(x) {grep(x, dataFiles, fixed=TRUE, value=TRUE)})
 
 inc <- sapply(dataFiles1, FUN=function(files){ grep("income", files,ignore.case=TRUE, value=TRUE) })
 
 imps <- substr(grep("imputed", dataFiles, value=T), 3,4)
-subimp <- imps[imps %in% yrs1]
+subimp <- imps[imps %in% substr(years, 3,4)]
 
 
-sasRead <- "../H-SES/sasread/nhisreadin.sas"
-op <- read.SAScii(file.path("~/Capstone FW SPH/Capstone/data", "nhis_2000_mort_2013_public.dat"), sasRead) 
 
