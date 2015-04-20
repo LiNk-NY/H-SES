@@ -28,6 +28,31 @@ readNHIS <- function(fromdir = NULL){
         return(mortdat3)
 }
 
+readNHISfiles <- function(sasfile, datafile){
+        
+        sas.import <- readLines(sasfile)
+        sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1
+        sas.import.tf <- tempfile()
+        writeLines(sas.import, con=sas.import.tf)
+        dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
+        dimensions <- dimensions[complete.cases(dimensions),]
+        colos <- fwf_widths(dimensions[,2], dimensions[,1])
+        
+        output <- read_fwf(datafile, colos)
+        return(output)
+}
+
+sas.import <- readLines(sasfiles[1])
+sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1
+sas.import.tf <- tempfile()
+writeLines(sas.import, con=sas.import.tf)
+dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
+dimensions <- dimensions[complete.cases(dimensions),]
+colos <- fwf_widths(dimensions[,2], dimensions[,1])
+read.SAScii(exefiles[1], sas.import.tf, zipped=TRUE)
+#output <- read_fwf(datafile, colos)
+return(output)
+
 mydata <- readNHIS(todir)
 
 library(data.table)
@@ -40,7 +65,24 @@ readLines(sasprog)
 
 mydata2$ELIGSTAT <- factor(mydata2$ELIGSTAT, levels=c(1,2,3), labels=c("Eligible", "Under18", "Ineligible"))
 mydata2$MORTSTAT <- factor(mydata2$MORTSTAT, levels=c(0,1), labels=c("Assumed alive", "Assumed deceased"))
+options(scipen=999)
+setkey(mydata2, PUBLICID)
 
+
+
+
+mydirs <- file.path(todir, grep("[0-9]{4}", dir(todir), value=TRUE))
+
+for (j in seq(mydirs)){
+        exefiles <- paste(mydirs[j], grep("\\.exe", dir(mydirs[j]), value=TRUE), sep="/")
+        sasfiles <- paste(mydirs[j], grep("\\.sas", dir(mydirs[j]), value=TRUE), sep="/")
+        myresult <- lapply(seq(exefiles), function(y) {readNHISfiles(sasfile = sasfiles[y], datafile = exefiles[y])} )
+}
+
+
+
+
+# Applying Formats --------------------------------------------------------
 
 formatR <- function(data){
         a <- grep("VALUE", readLines(sasprog), value=TRUE)
