@@ -1,9 +1,4 @@
 # Loading mortality data from file
-library(SAScii)
-library(readr)
-setwd("~/Capstone FW SPH/Capstone/data/")
-todir <- getwd()
-fromdir <- todir
 
 begin <- 1986
 finish <- 2004
@@ -28,6 +23,15 @@ readNHIS <- function(fromdir = NULL){
         return(mortdat3)
 }
 
+mydirs <- file.path(todir, grep("[0-9]{4}", dir(todir), value=TRUE))
+
+for (j in seq(mydirs)){
+        exefiles <- paste(mydirs[j], grep("\\.exe", dir(mydirs[j]), value=TRUE), sep="/")
+        sasfiles <- paste(mydirs[j], grep("\\.sas", dir(mydirs[j]), value=TRUE), sep="/")
+        myresult <- lapply(seq(exefiles), function(y) {readNHISfiles(sasfile = sasfiles[y], datafile = exefiles[y])} )
+}
+
+
 readNHISfiles <- function(sasfile, datafile){
         
         sas.import <- readLines(sasfile)
@@ -36,7 +40,7 @@ readNHISfiles <- function(sasfile, datafile){
         writeLines(sas.import, con=sas.import.tf)
         dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
         dimensions <- dimensions[complete.cases(dimensions),]
-        colos <- fwf_widths(dimensions[,2], dimensions[,1])
+        colos <- fwf_widths(dimensions[,2]+1, dimensions[,1])
         
         output <- read_fwf(datafile, colos)
         return(output)
@@ -70,14 +74,6 @@ setkey(mydata2, PUBLICID)
 
 
 
-
-mydirs <- file.path(todir, grep("[0-9]{4}", dir(todir), value=TRUE))
-
-for (j in seq(mydirs)){
-        exefiles <- paste(mydirs[j], grep("\\.exe", dir(mydirs[j]), value=TRUE), sep="/")
-        sasfiles <- paste(mydirs[j], grep("\\.sas", dir(mydirs[j]), value=TRUE), sep="/")
-        myresult <- lapply(seq(exefiles), function(y) {readNHISfiles(sasfile = sasfiles[y], datafile = exefiles[y])} )
-}
 
 
 

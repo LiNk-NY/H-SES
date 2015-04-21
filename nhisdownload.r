@@ -6,6 +6,7 @@ todir <- fromdir
 # Load dependencies
 library(RCurl)
 library(SAScii)
+library(readr)
 library(foreign)
 library(data.table)
 library(downloader)
@@ -13,8 +14,10 @@ library(downloader)
 # Disable use of Internet Explorer for internet access
 setInternet2(use=FALSE)
 
-linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
-# listFiles <- getURL(linkedFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
+dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+progFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
+# listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 # listFiles <- unlist(strsplit(listFiles, "\r*\n"))
 
 # Files were moved # 
@@ -23,7 +26,6 @@ linkedFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mo
 years <- seq(1986, 2004)
 #exclude 2004
 years <- years[-length(years)]
-dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 # dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
 
@@ -54,16 +56,16 @@ getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALS
         } else { todir <- getwd() }
         # download documentation if TRUE
         if(docs){
-                download.file(file.path(linkedFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
+                download.file(file.path(mortFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
                         destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
         }
         # simple check for valid years
         if(identical(begin, finish)){
                         dfile <- grep(begin, datFiles, value=TRUE)
-                        download.file(paste0(linkedFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
+                        download.file(paste0(mortFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
                 } else {
                 for (i in seq(dlnames)){
-                        download.file(paste0(linkedFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
+                        download.file(paste0(mortFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
                 }
                }
         return(todir)
@@ -73,16 +75,16 @@ getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALS
 # NHIS Data ---------------------------------------------------------------
 
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL){
-        dataNHIS <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+        dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 
         for(i in seq(years))
         if(years[i] %in% 1990:1996){
-                lf1 <- getURL(paste0(dataNHIS, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
+                lf1 <- getURL(paste0(dataFTP, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
                 lf1 <- unlist(strsplit(lf1, "\r*\n"))
                 lf1 <- grep("[^\\.txt]$", lf1, value=TRUE)
         } else if(years[i] %in% 1997:2004){
                 lf2 <- inc[grep("9[7-9]_|0[0-4]_", inc)]
-                lflinks <- paste0(dataNHIS, lf2, "/")
+                lflinks <- paste0(dataFTP, lf2, "/")
                 files <- lapply(lflinks, FUN= function(y){ getURL(y, ftp.use.epsv=FALSE, dirlistonly=TRUE)})
                 files <- lapply(files, FUN = function(y) {unlist(strsplit(y, "\r*\n"))})
                 files <- lapply(files, "[", c(1:2))
@@ -95,7 +97,7 @@ for( i in seq(lf1)){
         message("Loading downloaded files...")
         inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
         } else {
-        download(url=paste0(dataNHIS, "1990-96_Family_Income/", lf[i]), 
+        download(url=paste0(dataFTP, "1990-96_Family_Income/", lf[i]), 
                       destfile = file.path(todir, lf[i]), mode="wb", quiet = FALSE)
         unzip(file.path(fromdir, lf[i]), exdir=file.path(fromdir))
         file.remove(file.path(fromdir,lf[i]))
@@ -109,13 +111,11 @@ for( i in seq(lf1)){
 
 # SAS Program Files -------------------------------------------------------
 
-linked <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
-
-readFiles <- function(linked, years=NULL, lists=TRUE){
+readRemote <- function(link, years=NULL, lists=TRUE){
         if(is.null(years)){
-                links <- linked
+                links <- link
         } else if(is.numeric(years)) {
-        links <- paste0(linked, years, "/")
+        links <- paste0(link, years, "/")
         } else {
                 stop("Please provide numeric years!")
         }
@@ -127,7 +127,7 @@ readFiles <- function(linked, years=NULL, lists=TRUE){
         return(filelists)
 }
 
-saslist <- readFiles(linked, years)
+saslist <- readRemote(progFTP, years)
 
 saslist2 <- lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
 
@@ -140,14 +140,14 @@ sapply(years, FUN= function(var) {dir.create(file.path(todir, var))})
 
 # downloading files
 for (i in seq(years)){
-lapply(saslist3[[i]], FUN= function(file) { download(paste(linked, years[i], file, sep="/"), destfile=paste(todir, years[i], file, sep="/"), mode="wb", quiet=FALSE)})
+lapply(saslist3[[i]], FUN= function(file) { download(paste(progFTP, years[i], file, sep="/"), destfile=paste(todir, years[i], file, sep="/"), mode="wb", quiet=FALSE)})
 }
 
 # 2004
-prog04 <- readFiles(linked, 2004)
+prog04 <- readRemote(progFTP, 2004)
 progdirs <- grep(paste(tomatch, collapse="|"), unlist(prog04), value=TRUE)
-proglinks <- file.path(linked, 2004, progdirs, "/")
-progfiles <- unlist(lapply(proglinks, readFiles))
+proglinks <- file.path(progFTP, 2004, progdirs, "/")
+progfiles <- unlist(lapply(proglinks, readRemote))
 progfiles <- grep("\\.sas", progfiles, value=TRUE)
 dlprogs <- paste0(proglinks, progfiles)
 
@@ -158,16 +158,16 @@ for(l in seq(dlprogs)){
 
 # Data Files --------------------------------------------------------------
 
-dataFold <- getURL(dataNHIS, ftp.use.epsv = FALSE, dirlistonly = TRUE, crlf=TRUE)
+dataFold <- getURL(dataFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE, crlf=TRUE)
 dataFold <- unlist(strsplit(dataFold, "\r*\n"))
 dataFolders <- sapply(years, function(x) {grep(x, dataFold, fixed=TRUE, value=TRUE)})
 
 
 yearfolders <- lapply(dataFolders, FUN=function(x){grep("[0-9]{4}$", x, value=TRUE)})
-exefiles <- readFiles(dataNHIS, as.numeric(unlist(yearfolders)))
+exefiles <- readRemote(dataFTP, as.numeric(unlist(yearfolders)))
 exefiles2 <- lapply(exefiles, FUN=function(exec){grep(paste(tomatch, collapse="|"), exec, value=TRUE, ignore.case=TRUE)})
 
-dlinks <- lapply(seq(yearfolders), FUN= function(x){ paste0(dataNHIS, yearfolders[x], "/", unlist(exefiles2[x]))})
+dlinks <- lapply(seq(yearfolders), FUN= function(x){ paste0(dataFTP, yearfolders[x], "/", unlist(exefiles2[x]))})
 
 
 destinations <- paste0(todir, unlist(lapply(strsplit(unlist(dlinks), "NHIS"), "[", 2)))
@@ -177,10 +177,10 @@ for(j in seq(unlist(dlinks))){
 
 # 2004 
 
-oneout <- readFiles(dataNHIS, 2004)
+oneout <- readRemote(dataFTP, 2004)
 oneoutdirs <- grep(paste(tomatch, collapse="|"), unlist(oneout), value=TRUE)
-oneoutlinks <- file.path(dataNHIS, 2004, oneoutdirs, "/")
-files4 <- unlist(lapply(oneoutlinks, readFiles))
+oneoutlinks <- file.path(dataFTP, 2004, oneoutdirs, "/")
+files4 <- unlist(lapply(oneoutlinks, readRemote))
 dllinks <- paste0(oneoutlinks, files4)
 
 for (l in seq(dllinks)){
@@ -196,14 +196,14 @@ inc <- grep(paste(paste0(substr(svyyrs, 3, 4), "_"), collapse="|"), inc, value=T
 inc1 <- inc[!grepl("94_|96_I", inc, ignore.case=TRUE)]
 inc2 <- inc[grepl("94_|96_I", inc, ignore.case=TRUE)]
 
-inclinks1 <- paste0(dataNHIS, inc1, "/")
-inclinks2 <- paste0(dataNHIS, inc2, "/")
+inclinks1 <- paste0(dataFTP, inc1, "/")
+inclinks2 <- paste0(dataFTP, inc2, "/")
 # handle first line differently
 inclinks1 <- inclinks1[-1]
 
 inclinks3 <- sort(rep(inclinks1,2))
 
-incomefiles <- readFiles(inclinks1)
+incomefiles <- readRemote(inclinks1)
 incomefiles <- lapply(incomefiles, "[", c(1:2))
 names(incomefiles) <- seq(1997, 2004)
 
@@ -215,4 +215,10 @@ for (k in seq(dlinksinc)){
         download(url=dlinksinc[k], destfile=file.path(todir, sort(rep(seq(1997,2004),2))[k], "/", unlist(incomefiles)[k]), mode="wb", quiet=FALSE) 
 }
 
-
+fulllinks <- paste0(inclinks3, unlist(incomefiles))
+exes <- grep("\\.exe", fulllinks, value=TRUE)
+esses <- grep("\\.sas", fulllinks, value=TRUE)
+incomedata <- list()
+for (i in seq(exes)){
+        incomedata[[i]] <- readNHISfiles(sasfile = esses[i], datafile = exes[i])
+}
