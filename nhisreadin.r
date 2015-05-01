@@ -50,6 +50,8 @@ sas.import <- readLines(sasfiles[1])
 sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1
 sas.import.tf <- tempfile()
 writeLines(sas.import, con=sas.import.tf)
+sop <- fwf_empty(sas.import.tf, skip=sas_start-1)
+
 dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
 dimensions <- dimensions[complete.cases(dimensions),]
 colos <- fwf_widths(dimensions[,2], dimensions[,1])

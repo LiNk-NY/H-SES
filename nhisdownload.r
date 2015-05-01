@@ -23,11 +23,12 @@ progFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
 # Files were moved # 
 # datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
 
-years <- seq(1986, 2004)
-#exclude 2004
-years <- years[-length(years)]
+years <- seq(1997, 2003)
+# exclude 2004
+# years <- years[-length(years)]
 # dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
 
+tomatch <- c("person", "household", "family", "samadult")
 
 #' Download NHIS data from the CDC FTP site. 
 #' @param begin integer
@@ -131,7 +132,7 @@ saslist <- readRemote(progFTP, years)
 
 saslist2 <- lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
 
-tomatch <- c("person", "health", "household", "family", "samadult", "accessxx")
+
 saslist3 <- lapply(saslist2, FUN=function(sassy){grep(paste(tomatch, collapse="|"), sassy, value=TRUE, ignore.case=TRUE)})
 
 #2004 
@@ -164,6 +165,7 @@ dataFolders <- sapply(years, function(x) {grep(x, dataFold, fixed=TRUE, value=TR
 
 
 yearfolders <- lapply(dataFolders, FUN=function(x){grep("[0-9]{4}$", x, value=TRUE)})
+yearfolders <- yearfolders[lapply(yearfolders, length) != 0]
 exefiles <- readRemote(dataFTP, as.numeric(unlist(yearfolders)))
 exefiles2 <- lapply(exefiles, FUN=function(exec){grep(paste(tomatch, collapse="|"), exec, value=TRUE, ignore.case=TRUE)})
 
@@ -190,22 +192,22 @@ for (l in seq(dllinks)){
 
 # Income Files ------------------------------------------------------------
 
-svyyrs <- c(years, 2004)
+svyyrs <- years
 inc <- grep("income", dataFold, ignore.case=TRUE, value=TRUE)
 inc <- grep(paste(paste0(substr(svyyrs, 3, 4), "_"), collapse="|"), inc, value=TRUE)
 inc1 <- inc[!grepl("94_|96_I", inc, ignore.case=TRUE)]
-inc2 <- inc[grepl("94_|96_I", inc, ignore.case=TRUE)]
+# inc2 <- inc[grepl("94_|96_I", inc, ignore.case=TRUE)]
 
 inclinks1 <- paste0(dataFTP, inc1, "/")
-inclinks2 <- paste0(dataFTP, inc2, "/")
+# inclinks2 <- paste0(dataFTP, inc2, "/")
 # handle first line differently
-inclinks1 <- inclinks1[-1]
+# inclinks1 <- inclinks1[-1]
 
 inclinks3 <- sort(rep(inclinks1,2))
 
 incomefiles <- readRemote(inclinks1)
 incomefiles <- lapply(incomefiles, "[", c(1:2))
-names(incomefiles) <- seq(1997, 2004)
+names(incomefiles) <- svyyrs
 
 dlinksinc <- paste0(inclinks3, unlist(incomefiles))
 
@@ -215,9 +217,9 @@ for (k in seq(dlinksinc)){
         download(url=dlinksinc[k], destfile=file.path(todir, sort(rep(seq(1997,2004),2))[k], "/", unlist(incomefiles)[k]), mode="wb", quiet=FALSE) 
 }
 
-fulllinks <- paste0(inclinks3, unlist(incomefiles))
-exes <- grep("\\.exe", fulllinks, value=TRUE)
-esses <- grep("\\.sas", fulllinks, value=TRUE)
+
+exes <- grep("\\.exe", dlinksinc, value=TRUE)
+esses <- grep("\\.sas", dlinksinc, value=TRUE)
 incomedata <- list()
 for (i in seq(exes)){
         incomedata[[i]] <- readNHISfiles(sasfile = esses[i], datafile = exes[i])
