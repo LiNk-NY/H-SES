@@ -1,10 +1,13 @@
 # Loading mortality data from file
-
+# setwd("/media/mr148/MR_USB30/Capstone/datanew/")
+todir <- getwd()
 begin <- 1986
 finish <- 2004
 yrs <- seq(begin, finish, 1)
-
-readNHIS <- function(fromdir = NULL){
+library(SAScii)
+library(readr)
+mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
+readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
         sasprog <- "../H-SES/sasread/nhisreadin.sas"
         sas.import <- readLines(sasprog)
         sas.import.tf <- tempfile()
@@ -12,17 +15,27 @@ readNHIS <- function(fromdir = NULL){
         dimensions <- parse.SAScii(sas.import.tf)
         dimensions <- dimensions[complete.cases(dimensions),]
         colos <- fwf_widths(dimensions[,2], dimensions[,1])
-        
-        mortfiles <- file.path(fromdir, grep("public\\.dat$", dir(), value=TRUE))
+        neededyrs <- paste0(mortyrs, collapse="|")
+        mortfiles <- file.path(fromdir, grep(pattern=neededyrs, dir(fromdir), value=TRUE))
         mortdat <- list()
         for (i in 1:length(mortfiles)){
         mortdat[[i]] <- read_fwf(mortfiles[i], colos)
         }
-        mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
-        mortdat3 <- lapply(seq(length(mortdat2)), FUN= function(dataset){ cbind(mortdat2[[dataset]], YEAR = yrs[[dataset]]) })
-        return(mortdat3)
+        return(mortdat)
+}
+mymorts <- readNHIS(mortloc)
+
+for (j in seq(length(mymorts))){
+  mymorts[[j]]$PUBLICID <- sapply(mymorts[j], FUN = function(datas) { gsub("\r\n", "", datas$PUBLICID, fixed=TRUE)})
+  mymorts[[j]]$YEAR <- sapply(mymorts[j], FUN = function(dff) {substr(dff$PUBLICID, 1,4)})
+  #mymorts[[j]]$PUBLICID <- sapply(mymorts[j], FUN = function(datas) { gsub("^[0-9]{4}", "", datas$PUBLICID, perl=TRUE)})
 }
 
+mortdata <- do.call(rbind, mymorts)
+
+
+# mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
+# mortdat3 <- lapply(seq(length(mortdat2)), FUN= function(dataset){ cbind(mortdat2[[dataset]], YEAR = yrs[[dataset]]) })
 mydirs <- file.path(todir, grep("[0-9]{4}", dir(todir), value=TRUE))
 
 for (j in seq(mydirs)){
