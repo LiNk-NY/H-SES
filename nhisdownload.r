@@ -161,7 +161,7 @@ for(l in seq(dlprogs)){
 
 dataFold <- getURL(dataFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE, crlf=TRUE)
 dataFold <- unlist(strsplit(dataFold, "\r*\n"))
-dataFolders <- sapply(years, function(x) {grep(x, dataFold, fixed=TRUE, value=TRUE)})
+dataFolders <- sapply(yrs, function(x) {grep(x, dataFold, fixed=TRUE, value=TRUE)})
 
 
 yearfolders <- lapply(dataFolders, FUN=function(x){grep("[0-9]{4}$", x, value=TRUE)})
@@ -192,7 +192,7 @@ for (l in seq(dllinks)){
 
 # Income Files ------------------------------------------------------------
 
-svyyrs <- years
+svyyrs <- yrs
 inc <- grep("income", dataFold, ignore.case=TRUE, value=TRUE)
 inc <- grep(paste(paste0(substr(svyyrs, 3, 4), "_"), collapse="|"), inc, value=TRUE)
 inc1 <- inc[!grepl("94_|96_I", inc, ignore.case=TRUE)]

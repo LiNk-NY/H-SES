@@ -1,12 +1,9 @@
 # Loading mortality data from file
 # setwd("/media/mr148/MR_USB30/Capstone/datanew/")
-todir <- getwd()
-begin <- 1986
-finish <- 2004
-yrs <- seq(begin, finish, 1)
 library(SAScii)
 library(readr)
 mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
+mortloc <- "~/Capstone FW SPH/Capstone/data/Mortality/"
 readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
         sasprog <- "../H-SES/sasread/nhisreadin.sas"
         sas.import <- readLines(sasprog)
@@ -30,8 +27,20 @@ for (j in seq(length(mymorts))){
   mymorts[[j]]$YEAR <- sapply(mymorts[j], FUN = function(dff) {substr(dff$PUBLICID, 1,4)})
   #mymorts[[j]]$PUBLICID <- sapply(mymorts[j], FUN = function(datas) { gsub("^[0-9]{4}", "", datas$PUBLICID, perl=TRUE)})
 }
+options(scipen=999)
 
 mortdata <- do.call(rbind, mymorts)
+mortdata <- as.data.frame(mortdata, stringsAsFactors=FALSE)
+mortdata <- subset(mortdata, mortdata$ELIGSTAT == 1)
+mortdata$ELIGSTAT <- factor(mortdata$ELIGSTAT, levels=c(1), labels=c("Eligible"))
+# mortdata$MORTSTAT <- factor(mortdata$MORTSTAT, levels=c(0,1), labels=c("Assumed alive", "Assumed deceased"))
+mortdata$PUBLICID <- as.numeric(mortdata$PUBLICID)
+mortdata$YEAR <- as.numeric(mortdata$YEAR)
+mortdata$yrsalive <- with(mortdata, DODYEAR - YEAR)
+
+
+mortdata <- subset(mortdata, select=c("PUBLICID", "MORTSTAT", "DODYEAR", "SA_WGT_NEW", "YEAR", "yrsalive"))
+
 
 
 # mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
@@ -46,30 +55,32 @@ for (j in seq(mydirs)){
 
 
 readNHISfiles <- function(sasfile, datafile){
+        datafile.tf <- tempfile()
+        writeLines(datafile, con=datafile.tf)
         
         sas.import <- readLines(sasfile)
-        sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1
+        sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1        
         sas.import.tf <- tempfile()
         writeLines(sas.import, con=sas.import.tf)
-        dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
-        dimensions <- dimensions[complete.cases(dimensions),]
-        colos <- fwf_widths(dimensions[,2]+1, dimensions[,1])
+        output <- read.SAScii(datafile.tf, sas.import.tf, zipped=TRUE, beginline = sas_start)
         
-        output <- read_fwf(datafile, colos)
+        #dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
+        #dimensions <- dimensions[complete.cases(dimensions),]
+        #colos <- fwf_widths(dimensions[,2]+1, dimensions[,1])
+        
+        #output <- read_fwf(datafile, colos)
         return(output)
 }
+exe.tf <- tempfile()
+writeLines(exes[[1]], con=exe.tf)
 
-sas.import <- readLines(sasfiles[1])
+sas.import <- readLines(esses[[1]])
 sas_start <- grep("INPUT ALL VARIABLES", sas.import)+1
 sas.import.tf <- tempfile()
 writeLines(sas.import, con=sas.import.tf)
-sop <- fwf_empty(sas.import.tf, skip=sas_start-1)
+output <- read.SAScii(exes[[1]], sas.import.tf, beginline= sas_start, lrecl=35)
 
-dimensions <- parse.SAScii(sas.import.tf, beginline = sas_start)
-dimensions <- dimensions[complete.cases(dimensions),]
-colos <- fwf_widths(dimensions[,2], dimensions[,1])
-read.SAScii(exefiles[1], sas.import.tf, zipped=TRUE)
-#output <- read_fwf(datafile, colos)
+
 return(output)
 
 mydata <- readNHIS(todir)
@@ -78,15 +89,6 @@ library(data.table)
 mydata2 <- rbindlist(mydata)
 
 # apply manual formats
-
-sasprog <- "../H-SES/sasread/nhisreadin.sas"
-readLines(sasprog)
-
-mydata2$ELIGSTAT <- factor(mydata2$ELIGSTAT, levels=c(1,2,3), labels=c("Eligible", "Under18", "Ineligible"))
-mydata2$MORTSTAT <- factor(mydata2$MORTSTAT, levels=c(0,1), labels=c("Assumed alive", "Assumed deceased"))
-options(scipen=999)
-setkey(mydata2, PUBLICID)
-
 
 
 
