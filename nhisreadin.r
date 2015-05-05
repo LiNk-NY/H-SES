@@ -1,11 +1,11 @@
 # Loading mortality data from file
-# setwd("/media/mr148/MR_USB30/Capstone/datanew/")
+
 library(SAScii)
 library(readr)
-mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
+# mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
 mortloc <- "~/Capstone FW SPH/Capstone/data/Mortality/"
 readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
-        sasprog <- "~/Capstone/H-SES/sasread/nhisreadin.sas"
+        sasprog <- "~/Capstone FW SPH/Capstone/H-SES/sasread/nhisreadin.sas"
         sas.import <- readLines(sasprog)
         sas.import.tf <- tempfile()
         writeLines(sas.import, con=sas.import.tf)
@@ -40,7 +40,8 @@ mortdata$yrstoevent <- with(mortdata, DODYEAR - YEAR)
 
 
 mortdata <- subset(mortdata, select=c("PUBLICID", "MORTSTAT", "DODYEAR", "SA_WGT_NEW", "YEAR", "yrstoevent"))
-
+# adjust weight for combining across years
+mortdata$sawgtnew_c <- mortdata$SA_WGT_NEW/6
 
 
 # mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
