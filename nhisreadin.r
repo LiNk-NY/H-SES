@@ -2,10 +2,12 @@
 
 library(SAScii)
 library(readr)
-# mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
+mortloc <- "/media/mr148/MR_USB30/Capstone/datanew/Mortality/"
 mortloc <- "~/Capstone FW SPH/Capstone/data/Mortality/"
 readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
-        sasprog <- "~/Capstone FW SPH/Capstone/H-SES/sasread/nhisreadin.sas"
+        if(.Platform$OS.type=="unix"){
+          sasprog <- "/media/mr148/MR_USB30/Capstone/H-SES/sasread/nhisreadin.sas"
+        } else { sasprog <- "~/Capstone FW SPH/Capstone/H-SES/sasread/nhisreadin.sas" }
         sas.import <- readLines(sasprog)
         sas.import.tf <- tempfile()
         writeLines(sas.import, con=sas.import.tf)
