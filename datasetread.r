@@ -99,7 +99,10 @@ svydata$adnlong2[which(svydata$adnlong2 %in% c(7,8))] <- NA
 svydata$adnlong2[which(svydata$adnlong2==9)] <- 6
 svydata$amdlongr[which(svydata$amdlongr %in% c(7,8))] <- NA
 svydata$amdlongr[which(svydata$amdlongr==9)] <- 6
-                       
+
+
+# The Merge ---------------------------------------------------------------
+
 finaldata <- merge(svydata, mortdata, by.x="ID", by.y="PUBLICID")
 finaldata <- merge(finaldata, incomes, by.x="ID", by.y="ID")
 library(psych)
@@ -120,15 +123,27 @@ myfit2 <- principal(correls1, nfactors=3, rotate="varimax", scores=TRUE)
 polyscores <- predict(myfit2, polyset)
 colnames(polyscores) <- c("unafford", "medsexusual", "dental")
 
+# write.csv(myfit2$loadings[1:7,1:3], file="pcaloads.csv")
+
 finaldata <- cbind(finaldata, polyscores, incs)
 
-rm(list=grep("NHIS|ii", ls(), value=TRUE, fixed=TRUE))
+rm(list=grep("NHIS|ii", ls(), value=TRUE))
 
 library(survey)
 options("survey.lonely.psu"="adjust")
-op <- split(finaldata, finaldata$srvy_yr)
-dsgnobj <- list()
-dsgnobj <- lapply(op, function(svy){svydesign(id=~psu, strata = ~stratum, weights=~wtfa_sa, data = svy, nest = TRUE )})
-model1 <- svycoxph(Surv(yrstoevent, MORTSTAT>0)~unafford, design=dsgnobj[[1]])
 
-s <- predict(model1, type="curve", newdata=op[[1]])
+svymean(~age_p, dsgnobj)
+svymean(~sex, dsgnobj)
+
+dsgnobj <- svydesign(id=~psu, strata = ~stratum, weights=~sawgtnew_c, data = finaldata, nest = TRUE )
+
+s <- svykm(Surv(yrstoevent, MORTSTAT>0)~1, design=dsgnobj)
+plot(s, lwd=2, main="Survival Estimate", xlab="Time (years)")
+abline(a = .5, b=0, lty=3)
+
+model <- svycoxph(Surv(yrstoevent, MORTSTAT>0)~unafford+medsexusual+dental+income+age, design=dsgnobj)
+
+bas <- cbind(summary(model)$coefficients, summary(model)$conf.int)
+bas <- bas[,c(2,1,3,5,8,9)]
+
+# write.csv(bas, file="coxcoeff.csv")
