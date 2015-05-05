@@ -131,4 +131,4 @@ dsgnobj <- list()
 dsgnobj <- lapply(op, function(svy){svydesign(id=~psu, strata = ~stratum, weights=~wtfa_sa, data = svy, nest = TRUE )})
 model1 <- svycoxph(Surv(yrsalive, MORTSTAT>0)~unafford, design=dsgnobj[[1]])
 
-s <- predict(model1, type="curve", newdata=op[[1]])
+s <- predict(model1, se=TRUE, type="curve", newdata=op[[1]][1:40,])
