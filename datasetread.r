@@ -2,7 +2,7 @@
 library(pipeR)
 library(dplyr)
 
-# setwd("/media/mr148/MR_USB30//Capstone/datanew/")
+# setwd("/media/mr148/MR_USB30//Capstone/data/")
 setwd("~/Capstone FW SPH/Capstone/datanew/")
 tomatch <- paste("person", "house", "family", "samadult", sep="|")
 yrs <- as.character(2003:1998)
