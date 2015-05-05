@@ -2,7 +2,7 @@
 library(pipeR)
 library(dplyr)
 
-#setwd("/media/mr148/MR_USB30//Capstone/datanew/")
+# setwd("/media/mr148/MR_USB30//Capstone/datanew/")
 setwd("~/Capstone FW SPH/Capstone/datanew/")
 tomatch <- paste("person", "house", "family", "samadult", sep="|")
 yrs <- as.character(2003:1998)
@@ -129,6 +129,6 @@ options("survey.lonely.psu"="adjust")
 op <- split(finaldata, finaldata$srvy_yr)
 dsgnobj <- list()
 dsgnobj <- lapply(op, function(svy){svydesign(id=~psu, strata = ~stratum, weights=~wtfa_sa, data = svy, nest = TRUE )})
-model1 <- svycoxph(Surv(yrsalive, MORTSTAT>0)~unafford, design=dsgnobj[[1]])
+model1 <- svycoxph(Surv(yrstoevent, MORTSTAT>0)~unafford, design=dsgnobj[[1]])
 
 s <- predict(model1, type="curve", newdata=op[[1]])
