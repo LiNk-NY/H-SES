@@ -5,7 +5,7 @@ library(readr)
 mortloc <- "/media/mr148/MR_USB30/Capstone/data/Mortality/"
 mortloc <- "~/Capstone FW SPH/Capstone/data/Mortality/"
 readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
-        sasprog <- "../H-SES/sasread/nhisreadin.sas"
+        sasprog <- "~/Capstone/H-SES/sasread/nhisreadin.sas"
         sas.import <- readLines(sasprog)
         sas.import.tf <- tempfile()
         writeLines(sas.import, con=sas.import.tf)
@@ -36,10 +36,10 @@ mortdata$ELIGSTAT <- factor(mortdata$ELIGSTAT, levels=c(1), labels=c("Eligible")
 # mortdata$MORTSTAT <- factor(mortdata$MORTSTAT, levels=c(0,1), labels=c("Assumed alive", "Assumed deceased"))
 mortdata$PUBLICID <- as.numeric(mortdata$PUBLICID)
 mortdata$YEAR <- as.numeric(mortdata$YEAR)
-mortdata$yrsalive <- with(mortdata, DODYEAR - YEAR)
+mortdata$yrstoevent <- with(mortdata, DODYEAR - YEAR)
 
 
-mortdata <- subset(mortdata, select=c("PUBLICID", "MORTSTAT", "DODYEAR", "SA_WGT_NEW", "YEAR", "yrsalive"))
+mortdata <- subset(mortdata, select=c("PUBLICID", "MORTSTAT", "DODYEAR", "SA_WGT_NEW", "YEAR", "yrstoevent"))
 
 
 
