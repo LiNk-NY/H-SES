@@ -39,11 +39,12 @@ mortdata$ELIGSTAT <- factor(mortdata$ELIGSTAT, levels=c(1), labels=c("Eligible")
 mortdata$PUBLICID <- as.numeric(mortdata$PUBLICID)
 mortdata$YEAR <- as.numeric(mortdata$YEAR)
 mortdata$yrstoevent <- with(mortdata, DODYEAR - YEAR)
-
+mortdata$yrstoevent <- ifelse(is.na(mortdata$yrstoevent), with(mortdata, 2011 - YEAR), mortdata$yrstoevent)
 
 mortdata <- subset(mortdata, select=c("PUBLICID", "MORTSTAT", "DODYEAR", "SA_WGT_NEW", "YEAR", "yrstoevent"))
 # adjust weight for combining across years
 mortdata$sawgtnew_c <- mortdata$SA_WGT_NEW/6
+
 
 
 # mortdat2 <- lapply(mortdat, FUN= function(dataset) { dataset <- subset(dataset, dataset$ELIGSTAT == 1)})
