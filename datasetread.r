@@ -105,12 +105,13 @@ svydata$amdlongr[which(svydata$amdlongr==9)] <- 6
 
 finaldata <- merge(svydata, mortdata, by.x="ID", by.y="PUBLICID")
 finaldata <- merge(finaldata, incomes, by.x="ID", by.y="ID")
+finaldata$sex <- relevel(finaldata$sex, ref = "Female")
+
 library(psych)
 
-myfit <- principal(finaldata[,grep(gsub("ID","age_p", targets, fixed = T), names(finaldata), value=TRUE)], nfactors=10, rotate="varimax", scores=TRUE)
-plot(myfit$values, type="b", ylab="Eigen values", xlab="Components", main="Scree plot", lwd=2, col="darkblue"); abline(h=1, lty=2, col="darkgray", lwd=2)
 myfit <- principal(finaldata[,grep(gsub("ID|","", targets, fixed = T), names(finaldata), value=TRUE)], nfactors=2, rotate="varimax", scores=TRUE)
-incs <- myfit$scores[,c(1,2)]
+plot(myfit$values, type="b", ylab="Eigen values", xlab="Components", main="Scree plot", lwd=2, col="darkblue"); abline(h=1, lty=2, col="darkgray", lwd=2)
+incs <- cbind(myfit$scores[,1], finaldata$age_p)
 colnames(incs) <- c("income", "age")
 
 polyset <- cbind(sex=as.numeric(finaldata[,5]), finaldata[, 7:12])
@@ -132,18 +133,23 @@ rm(list=grep("NHIS|ii", ls(), value=TRUE))
 library(survey)
 options("survey.lonely.psu"="adjust")
 
-svymean(~age_p, dsgnobj)
-svymean(~sex, dsgnobj)
-
 dsgnobj <- svydesign(id=~psu, strata = ~stratum, weights=~sawgtnew_c, data = finaldata, nest = TRUE )
 
+svymean(~age_p, dsgnobj)
+svymean(~sex, dsgnobj)
+svymean(~factor(MORTSTAT), dsgnobj)
+
 s <- svykm(Surv(yrstoevent, MORTSTAT>0)~1, design=dsgnobj)
-plot(s, lwd=2, main="Survival Estimate", xlab="Time (years)")
+png(filename = "KMsurv.png", width = 720, height = 480)
+plot(s, lwd=2, main="Kaplan-Meier Survival Curve", xlab="Time (years)")
+mtext(text = "All-cause Mortality", side = 3, line = 0.5)
 abline(a = .5, b=0, lty=3)
+graphics.off()
+
 
 model <- svycoxph(Surv(yrstoevent, MORTSTAT>0)~unafford+medsexusual+dental+income+age, design=dsgnobj)
 
 bas <- cbind(summary(model)$coefficients, summary(model)$conf.int)
-bas <- bas[,c(2,1,3,5,8,9)]
+bas <- round(bas[,c(2,1,3,5,8,9)],3)
 
 # write.csv(bas, file="coxcoeff.csv")
