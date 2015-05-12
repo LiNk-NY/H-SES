@@ -17,6 +17,8 @@ setInternet2(use=FALSE)
 mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
 dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 progFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
+questFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Survey_Questionnaires/NHIS/"
+dsetdocFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/NHIS/"
 # listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 # listFiles <- unlist(strsplit(listFiles, "\r*\n"))
 

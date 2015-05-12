@@ -16,6 +16,43 @@ for (j in filenames){
   load(j)
 }
 
+
+# Persons Load ------------------------------------------------------------
+colnames(NHIS.00.personsx.df)[match("wrklyr", names(NHIS.00.personsx.df))] <- "wrklyr1"
+colnames(NHIS.99.personsx.df)[match("wrklyr", names(NHIS.99.personsx.df))] <- "wrklyr1"
+colnames(NHIS.98.personsx.df)[match("wrklyr", names(NHIS.98.personsx.df))] <- "wrklyr1"
+
+
+pers <- lapply(grep("person", ls(), value=TRUE), get)
+for (j in seq(length(pers))){
+        pers[[j]]$ID <- sapply(pers[j], FUN = function(datas){ paste0(datas$srvy_yr, datas$hhx, datas$fmx, datas$px)})
+}
+
+names(pers) <- as.character(c(pers[[1]]$srvy_yr[1], pers[[2]]$srvy_yr[1], pers[[3]]$srvy_yr[1], pers[[4]]$srvy_yr[1], pers[[5]]$srvy_yr[1], pers[[6]]$srvy_yr[1]))
+
+filt <- c("ID", "wrklyr1", "educ_r1", "private", "notcov", "srvy_yr")
+
+pers2 <- lapply(pers, FUN = function(y){ subset(y, select = filt) })
+
+# check lapply "bug" with named list after creating new var
+
+personsx <- do.call(rbind, pers2)
+
+xtabs(~ private + notcov, personsx)
+
+personsx$insstat <- ifelse(personsx$private<=2 & personsx$notcov ==2, 3, 
+                           ifelse(personsx$private ==3 & personsx$notcov==2, 2, 
+                                  ifelse(personsx$private == 3 & personsx$notcov==1, 1, NA)))
+personsx$education <- with(personsx, ifelse(educ_r1 <=2 , 1, 
+                                            ifelse(educ_r1 == 3 | educ_r1 == 4, 2, 
+                                                   ifelse(educ_r1 %in% c(5,6,7), 3, 
+                                                          ifelse(educ_r1 %in% c(8,9), 4, NA)))))
+personsx$worklyr <- ifelse(personsx$wrklyr1>6, NA, personsx$wrklyr1)
+personsx$worklyr <- (3-personsx$worklyr) #reverse code
+
+personsx <- subset(personsx, select=c("ID", "srvy_yr", "insstat", "education", "worklyr"))
+
+
 # Income Load -------------------------------------------------------------
 incomes <- list()
 for(l in seq(length(yrs))){
