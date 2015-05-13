@@ -143,6 +143,7 @@ svydata$amdlongr[which(svydata$amdlongr==9)] <- 6
 finaldata <- merge(svydata, mortdata, by.x="ID", by.y="PUBLICID")
 finaldata <- merge(finaldata, incomes, by.x="ID", by.y="ID")
 finaldata$sex <- relevel(finaldata$sex, ref = "Female")
+finaldata <- merge(finaldata, personsx, by.x = "ID", by.y="ID")
 
 library(psych)
 
@@ -151,7 +152,7 @@ plot(myfit$values, type="b", ylab="Eigen values", xlab="Components", main="Scree
 incs <- cbind(myfit$scores[,1], finaldata$age_p)
 colnames(incs) <- c("income", "age")
 
-polyset <- cbind(sex=as.numeric(finaldata[,5]), finaldata[, 7:12])
+polyset <- finaldata[, grep("usual|ahca|long|stat|educ", names(finaldata), val=T)]
 poly1 <- polychoric(polyset)
 correls1 <- poly1$rho
 
@@ -159,9 +160,9 @@ myfit2 <- principal(correls1, nfactors=7, rotate="varimax", scores=TRUE)
 plot(myfit2$values, type="b", ylab="Eigen values", xlab="Components", main="Scree plot", lwd=2, col="darkblue"); abline(h=1, lty=2, col="darkgray", lwd=2)
 myfit2 <- principal(correls1, nfactors=3, rotate="varimax", scores=TRUE)
 polyscores <- predict(myfit2, polyset)
-colnames(polyscores) <- c("unafford", "medsexusual", "dental")
+colnames(polyscores) <- c("unafford", "medusual", "educdentalins")
 
-# write.csv(myfit2$loadings[1:7,1:3], file="pcaloads.csv")
+# write.csv(myfit2$loadings[1:8,1:3], file="pcaloads.csv")
 
 finaldata <- cbind(finaldata, polyscores, incs)
 
@@ -171,22 +172,29 @@ library(survey)
 options("survey.lonely.psu"="adjust")
 
 dsgnobj <- svydesign(id=~psu, strata = ~stratum, weights=~sawgtnew_c, data = finaldata, nest = TRUE )
-
+# add gender after
 svymean(~age_p, dsgnobj)
 svymean(~sex, dsgnobj)
 svymean(~factor(MORTSTAT), dsgnobj)
 
-s <- svykm(Surv(yrstoevent, MORTSTAT>0)~1, design=dsgnobj)
-png(filename = "KMsurv.png", width = 720, height = 480)
+# s <- svykm(Surv(yrstoevent, MORTSTAT==1)~1, design=dsgnobj)
+# png(filename = "KMsurv.png", width = 720, height = 480)
+
+
 plot(s, lwd=2, main="Kaplan-Meier Survival Curve", xlab="Time (years)")
 mtext(text = "All-cause Mortality", side = 3, line = 0.5)
 abline(a = .5, b=0, lty=3)
 graphics.off()
 
 
-model <- svycoxph(Surv(yrstoevent, MORTSTAT>0)~unafford+medsexusual+dental+income+age, design=dsgnobj)
+model <- svycoxph(Surv(yrstoevent, MORTSTAT==1)~unafford+medusual+educdentalins+income+age+sex, design=dsgnobj)
 
 bas <- cbind(summary(model)$coefficients, summary(model)$conf.int)
 bas <- round(bas[,c(2,1,3,5,8,9)],3)
 
 # write.csv(bas, file="coxcoeff.csv")
+
+educden <- cut2(finaldata$educdentalins, g=3)
+
+s1 <- svykm(Surv(yrstoevent, MORTSTAT==1)~ strata(educden), design=dsgnobj)
+plot(s1, lty=6)
