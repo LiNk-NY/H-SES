@@ -21,7 +21,9 @@ for (j in filenames){
 colnames(NHIS.00.personsx.df)[match("wrklyr", names(NHIS.00.personsx.df))] <- "wrklyr1"
 colnames(NHIS.99.personsx.df)[match("wrklyr", names(NHIS.99.personsx.df))] <- "wrklyr1"
 colnames(NHIS.98.personsx.df)[match("wrklyr", names(NHIS.98.personsx.df))] <- "wrklyr1"
-
+colnames(NHIS.98.personsx.df)[match("race", names(NHIS.98.personsx.df))] <- "racerp_i"
+colnames(NHIS.99.personsx.df)[match("racer_p", names(NHIS.99.personsx.df))] <- "racerp_i"
+colnames(NHIS.03.personsx.df)[match("racerpi2", names(NHIS.03.personsx.df))] <- "racerp_i"
 
 pers <- lapply(grep("person", ls(), value=TRUE), get)
 for (j in seq(length(pers))){
@@ -30,7 +32,7 @@ for (j in seq(length(pers))){
 
 names(pers) <- as.character(c(pers[[1]]$srvy_yr[1], pers[[2]]$srvy_yr[1], pers[[3]]$srvy_yr[1], pers[[4]]$srvy_yr[1], pers[[5]]$srvy_yr[1], pers[[6]]$srvy_yr[1]))
 
-filt <- c("ID", "wrklyr1", "educ_r1", "private", "notcov", "srvy_yr")
+filt <- c("ID", "wrklyr1", "educ_r1", "private", "notcov", "racerp_i", "srvy_yr")
 
 pers2 <- lapply(pers, FUN = function(y){ subset(y, select = filt) })
 
@@ -50,7 +52,7 @@ personsx$education <- with(personsx, ifelse(educ_r1 <=2 , 1,
 personsx$worklyr <- ifelse(personsx$wrklyr1>6, NA, personsx$wrklyr1)
 personsx$worklyr <- (3-personsx$worklyr) #reverse code
 
-personsx <- subset(personsx, select=c("ID", "srvy_yr", "insstat", "education", "worklyr"))
+personsx <- subset(personsx, select=c("ID", "insstat", "education", "racerp_i", "worklyr"))
 
 
 # Income Load -------------------------------------------------------------
@@ -177,9 +179,8 @@ svymean(~age_p, dsgnobj)
 svymean(~sex, dsgnobj)
 svymean(~factor(MORTSTAT), dsgnobj)
 
-# s <- svykm(Surv(yrstoevent, MORTSTAT==1)~1, design=dsgnobj)
+s <- svykm(Surv(yrstoevent, MORTSTAT==1)~1, design=dsgnobj)
 # png(filename = "KMsurv.png", width = 720, height = 480)
-
 
 plot(s, lwd=2, main="Kaplan-Meier Survival Curve", xlab="Time (years)")
 mtext(text = "All-cause Mortality", side = 3, line = 0.5)
@@ -187,14 +188,25 @@ abline(a = .5, b=0, lty=3)
 graphics.off()
 
 
-model <- svycoxph(Surv(yrstoevent, MORTSTAT==1)~unafford+medusual+educdentalins+income+age+sex, design=dsgnobj)
+sort(which(!complete.cases(finaldata[, c("yrstoevent", "MORTSTAT", "unafford", "medusual", "educdentalins", "income", "age", "sex")])))
+
+modelset <- finaldata[, c("psu", "stratum", "sawgtnew_c", "yrstoevent", "MORTSTAT", "unafford", "medusual", "educdentalins", "income", "age", "sex")]
+modelset <- modelset[complete.cases(modelset),]
+
+dsgnobj2 <- svydesign(id=~psu, strata = ~stratum, weights=~sawgtnew_c, data = modelset, nest = TRUE )
+
+model <- svycoxph(Surv(yrstoevent, MORTSTAT==1)~unafford+medusual+educdentalins+income+age+sex, design=dsgnobj2)
+riskscore <- predict(model)
+library(Hmisc)
+terts <- cut2(riskscore, g=3)
 
 bas <- cbind(summary(model)$coefficients, summary(model)$conf.int)
 bas <- round(bas[,c(2,1,3,5,8,9)],3)
 
 # write.csv(bas, file="coxcoeff.csv")
 
-educden <- cut2(finaldata$educdentalins, g=3)
+s1 <- svykm(Surv(yrstoevent, MORTSTAT==1)~ strata(terts), design=dsgnobj2)
+plot(s1, lwd=2, main="Kaplan-Meier Survival Tertiles Curve", xlab = "Time (years)", lty=6)
+mtext(text="All-cause Mortality", side=3, line=0.5)
+legend(1,.5, c("Tertile 1", "Tertile 2", "Tertile 3"), lty=6)
 
-s1 <- svykm(Surv(yrstoevent, MORTSTAT==1)~ strata(educden), design=dsgnobj)
-plot(s1, lty=6)
