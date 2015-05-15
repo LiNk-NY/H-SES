@@ -205,8 +205,14 @@ bas <- round(bas[,c(2,1,3,5,8,9)],3)
 
 # write.csv(bas, file="coxcoeff.csv")
 
+png(filename = "KMsurv.png", width = 720, height = 540 )
 s1 <- svykm(Surv(yrstoevent, MORTSTAT==1)~ strata(terts), design=dsgnobj2)
 plot(s1, lwd=2, main="Kaplan-Meier Survival Tertiles Curve", xlab = "Time (years)", lty=6)
 mtext(text="All-cause Mortality", side=3, line=0.5)
 legend(1,.5, c("Tertile 1", "Tertile 2", "Tertile 3"), lty=6)
+text(x=1, y=.55, labels = "Risk Score", pos = 4)
 
+graphics.off()
+
+devtools::install_github("christophergandrud/simPH")
+# works on srvyfit objects
