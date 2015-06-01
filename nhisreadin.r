@@ -2,11 +2,11 @@
 
 library(SAScii)
 library(readr)
-mortloc <- "/media/mr148/MR_USB30/Capstone/datanew/Mortality/"
-mortloc <- "~/Capstone FW SPH/Capstone/data/Mortality/"
+mortloc <- file.path("~/Documents/NHIS/data/Mortality/")
+mortloc <- file.path("~/Capstone FW SPH/Capstone/data/Mortality/")
 readNHIS <- function(fromdir = NULL, mortyrs = 1998:2003){
         if(.Platform$OS.type=="unix"){
-          sasprog <- "/media/mr148/MR_USB30/Capstone/H-SES/sasread/nhisreadin.sas"
+          sasprog <- "~/Documents/GitHub/H-SES/sasread/nhisreadin.sas"
         } else { sasprog <- "~/Capstone FW SPH/Capstone/H-SES/sasread/nhisreadin.sas" }
         sas.import <- readLines(sasprog)
         sas.import.tf <- tempfile()
@@ -27,7 +27,6 @@ mymorts <- readNHIS(mortloc)
 for (j in seq(length(mymorts))){
   mymorts[[j]]$PUBLICID <- sapply(mymorts[j], FUN = function(datas) { gsub("\r\n", "", datas$PUBLICID, fixed=TRUE)})
   mymorts[[j]]$YEAR <- sapply(mymorts[j], FUN = function(dff) {substr(dff$PUBLICID, 1,4)})
-  #mymorts[[j]]$PUBLICID <- sapply(mymorts[j], FUN = function(datas) { gsub("^[0-9]{4}", "", datas$PUBLICID, perl=TRUE)})
 }
 options(scipen=999)
 

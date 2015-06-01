@@ -4,6 +4,7 @@ library(dplyr)
 
 # setwd("/media/mr148/MR_USB30//Capstone/data/")
 setwd("~/Capstone FW SPH/Capstone/datanew/")
+setwd("Documents/NHIS/data/")
 tomatch <- paste("person", "house", "family", "samadult", sep="|")
 yrs <- as.character(2003:1998)
 lapply(yrs, dir) %>>% lapply(FUN= function(file) {grep("\\.rda", file, value=TRUE)}) %>>%
