@@ -1,7 +1,5 @@
 # National Health Interview Survey download script
-setwd("~/Capstone FW SPH/Capstone/H-SES/")
-fromdir <- "~/Capstone FW SPH/Capstone/data"
-todir <- fromdir
+# Set working directory
 
 # Load dependencies
 library(RCurl)
@@ -19,11 +17,11 @@ dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 progFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
 questFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Survey_Questionnaires/NHIS/"
 dsetdocFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/NHIS/"
-# listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
-# listFiles <- unlist(strsplit(listFiles, "\r*\n"))
+ listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+listFiles <- unlist(strsplit(listFiles, "\r*\n"))
 
 # Files were moved # 
-# datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
+ datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
 
 years <- seq(1997, 2003)
 # exclude 2004
@@ -33,117 +31,121 @@ years <- seq(1997, 2003)
 tomatch <- c("person", "household", "family", "samadult")
 
 #' Download NHIS data from the CDC FTP site. 
-#' @param begin integer
-#' @param finish integer
-#' @param todir character vector
-#' @param docs logical
-#' @export
+#' @param begin integer Data collection year beginning from 1990
+#' @param finish integer Data collection end-point ending in 2000
+#' @param todir character Path specifying where to place downloaded data
+#' @param docs logical Whether to download documentation 
+#' @export 
 #' @examples
 #' getlinkedNHIS(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
-getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE) {
-        yrs <- seq(begin, finish, by=1)
-        if(!is.numeric(begin)|!is.numeric(finish)){
-                stop("Survey years must be four digit numbers!")
-        } else if(begin < 1986 | finish > 2004){
-                        stop("Years outside of survey collection period!")
-                }
-        # check directory path and create if non-existent
-        if(!is.null(todir)){
-                if(!class(todir)=="character"){
-                        stop("Please enter a valid directory path!")
-                } else if(!file.exists(file.path(todir))){
-                        cat("Directory does not exist >> creating one...")
-                        dir.create(todir, recursive=TRUE)
-                }
-                
-        } else { todir <- getwd() }
-        # download documentation if TRUE
-        if(docs){
-                download.file(file.path(mortFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
-                        destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
-        }
-        # simple check for valid years
-        if(identical(begin, finish)){
-                        dfile <- grep(begin, datFiles, value=TRUE)
-                        download.file(paste0(mortFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
-                } else {
-                for (i in seq(dlnames)){
-                        download.file(paste0(mortFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
-                }
-               }
-        return(todir)
+getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE){
+  yrs <- seq(begin, finish, by=1)
+  if(!is.numeric(begin)|!is.numeric(finish)){
+    stop("Survey years must be four digit numbers!")
+  } else if(begin < 1986 | finish > 2004){
+    stop("Years outside of survey collection period!")
+  }
+  # check directory path and create if non-existent
+  if(!is.null(todir)){
+    if(!class(todir)=="character"){
+      stop("Please enter a valid directory path!")
+    } else if(!file.exists(file.path(todir))){
+      cat("Directory does not exist >> creating one...")
+      dir.create(todir, recursive=TRUE)
+    }
+    
+  } else { todir <- getwd() }
+  # download documentation if TRUE
+  if(docs){
+    download.file(file.path(mortFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
+                  destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
+  }
+  # simple check for valid years
+  if(identical(begin, finish)){
+    dfile <- grep(begin, datFiles, value=TRUE)
+    download.file(paste0(mortFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
+  } else {
+    for (i in seq(dlnames)){
+      download.file(paste0(mortFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
+    }
+  }
+  return(todir)
 }
 
 
 # NHIS Data ---------------------------------------------------------------
 
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL){
-        dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
-
-        for(i in seq(years))
-        if(years[i] %in% 1990:1996){
-                lf1 <- getURL(paste0(dataFTP, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
-                lf1 <- unlist(strsplit(lf1, "\r*\n"))
-                lf1 <- grep("[^\\.txt]$", lf1, value=TRUE)
-        } else if(years[i] %in% 1997:2004){
-                lf2 <- inc[grep("9[7-9]_|0[0-4]_", inc)]
-                lflinks <- paste0(dataFTP, lf2, "/")
-                files <- lapply(lflinks, FUN= function(y){ getURL(y, ftp.use.epsv=FALSE, dirlistonly=TRUE)})
-                files <- lapply(files, FUN = function(y) {unlist(strsplit(y, "\r*\n"))})
-                files <- lapply(files, "[", c(1:2))
-        }
-inco <- list()
-for( i in seq(lf1)){
-        cachefile <- file.path(fromdir, "Faminc/", grep(paste0(gsub(".zip","",lf1[i],ignore.case=TRUE),".dat"), 
-                                             dir(file.path(todir, "Faminc/")), ignore.case=TRUE, value=TRUE))        
-        if(file.exists(cachefile) & file.info(cachefile) > 0){
-        message("Loading downloaded files...")
-        inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
-        } else {
-        download(url=paste0(dataFTP, "1990-96_Family_Income/", lf[i]), 
-                      destfile = file.path(todir, lf[i]), mode="wb", quiet = FALSE)
-        unzip(file.path(fromdir, lf[i]), exdir=file.path(fromdir))
-        file.remove(file.path(fromdir,lf[i]))
-        inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
-        inco <- lapply(inco, FUN=function(year){ year <- subset(year, year$ELIGSTAT == 1) })                
-                }
-        }
-        
+  dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
+  for(i in seq(years))
+    if(years[i] %in% 1990:1996){
+      lf1 <- getURL(paste0(dataFTP, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
+      lf1 <- unlist(strsplit(lf1, "\r*\n"))
+      lf1 <- grep("[^\\.txt]$", lf1, value=TRUE)
+    } else if(years[i] %in% 1997:2004){
+      lf2 <- inc[grep("9[7-9]_|0[0-4]_", inc)]
+      lflinks <- paste0(dataFTP, lf2, "/")
+      files <- lapply(lflinks, FUN= function(y){ getURL(y, ftp.use.epsv=FALSE, dirlistonly=TRUE)})
+      files <- lapply(files, FUN = function(y) {unlist(strsplit(y, "\r*\n"))})
+      files <- lapply(files, "[", c(1:2))
+    }
+  inco <- list()
+  for( i in seq(lf1)){
+    cachefile <- file.path(fromdir, "Faminc/", grep(paste0(gsub(".zip","",lf1[i],ignore.case=TRUE),".dat"), 
+                                                    dir(file.path(todir, "Faminc/")), ignore.case=TRUE, value=TRUE))        
+    if(file.exists(cachefile) & file.info(cachefile) > 0){
+      message("Loading downloaded files...")
+      # inco[[i]] <- read.SAScii(cachefile, # insert read in SAS prog #)
+    } else {
+      download(url=paste0(dataFTP, "1990-96_Family_Income/", lf[i]), 
+               destfile = file.path(todir, lf[i]), mode="wb", quiet = FALSE)
+      unzip(file.path(fromdir, lf[i]), exdir=file.path(fromdir))
+      file.remove(file.path(fromdir,lf[i]))
+      #inco[[i]] <- read.SAScii(cachefile ) # insert read in SAS prog #)
+                               inco <- lapply(inco, FUN=function(year){ year <- subset(year, year$ELIGSTAT == 1) })                
+    }
+  }
 } # function close
 
 
 # SAS Program Files -------------------------------------------------------
 
 readRemote <- function(link, years=NULL, lists=TRUE){
-        if(is.null(years)){
-                links <- link
-        } else if(is.numeric(years)) {
-        links <- paste0(link, years, "/")
-        } else {
-                stop("Please provide numeric years!")
-        }
-        
-        filelists <- list()
-        for(jj in seq(links)){
-        filelists[jj] <- lapply(links[jj], FUN = function(link) {tolower(strsplit(getURL(link, dirlistonly=lists), "\r*\n")[[1]])})
-        }
-        return(filelists)
+  if(is.null(years)){
+    links <- link
+  } else if(is.numeric(years)) {
+    links <- paste0(link, years, "/")
+  } else {
+    stop("Please provide numeric years!")
+  }
+  filelists <- list()
+  for(jj in seq(links)){
+    filelists[jj] <- lapply(links[jj], FUN = function(link) {tolower(strsplit(getURL(link, dirlistonly=lists), "\r*\n")[[1]])})
+  }
+  return(filelists)
 }
 
 saslist <- readRemote(progFTP, years)
 
 saslist2 <- lapply(saslist, FUN=function(sassy){grep("\\.sas", sassy, value=TRUE, ignore.case=TRUE)})
 
-
 saslist3 <- lapply(saslist2, FUN=function(sassy){grep(paste(tomatch, collapse="|"), sassy, value=TRUE, ignore.case=TRUE)})
 
 #2004 
+todir <- getwd()
 
-sapply(years, FUN= function(var) {dir.create(file.path(todir, var))})
+invisible(sapply(years, FUN= function(var) {if(!dir.exists(file.path(todir, var))){
+  dir.create(file.path(todir, var))
+}
+}))
 
 # downloading files
-for (i in seq(years)){
-lapply(saslist3[[i]], FUN= function(file) { download(paste(progFTP, years[i], file, sep="/"), destfile=paste(todir, years[i], file, sep="/"), mode="wb", quiet=FALSE)})
+
+for(i in seq_along(saslist3)){
+  for(j in seq_along(saslist3[[i]])){
+    download(file.path(progFTP, years[i], saslist3[[i]][j]),
+             destfile = file.path(todir, years[i], saslist3[[i]][j]), mode = "wb", quiet = FALSE)
+  }
 }
 
 # 2004
