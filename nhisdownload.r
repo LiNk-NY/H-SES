@@ -17,34 +17,37 @@ dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
 progFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Program_Code/NHIS/"
 questFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Survey_Questionnaires/NHIS/"
 dsetdocFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/NHIS/"
- listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-
-# Files were moved # 
- datFiles <- tolower(unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)})))
+datFiles <- unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)}))
 
 years <- seq(1997, 2003)
 # exclude 2004
 # years <- years[-length(years)]
-# dlnames <- datFiles[sapply(yrs, function(x){grep(x, datFiles)})]
+ dlnames <- datFiles[sapply(years, function(x){grep(x, datFiles)})]
 
 tomatch <- c("person", "household", "family", "samadult")
 
 #' Download NHIS data from the CDC FTP site. 
-#' @param begin integer Data collection year beginning from 1990
-#' @param finish integer Data collection end-point ending in 2000
+#' @param begin integer Data collection year beginning from 1986
+#' @param finish integer Data collection end-point ending in 2004
 #' @param todir character Path specifying where to place downloaded data
 #' @param docs logical Whether to download documentation 
 #' @export 
 #' @examples
-#' getlinkedNHIS(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
-getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE){
-  yrs <- seq(begin, finish, by=1)
+#' getMortality(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
+getMortality <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE){
   if(!is.numeric(begin)|!is.numeric(finish)){
     stop("Survey years must be four digit numbers!")
   } else if(begin < 1986 | finish > 2004){
     stop("Years outside of survey collection period!")
   }
+  mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
+  listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+  listFiles <- unlist(strsplit(listFiles, "\r*\n"))
+  datFiles <- unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)}))
+  yrs <- seq(begin, finish, by=1)
+  dlnames <- sapply(yrs, function(x){grep(x, datFiles, fixed = TRUE, value = TRUE)})
   # check directory path and create if non-existent
   if(!is.null(todir)){
     if(!class(todir)=="character"){
@@ -69,7 +72,7 @@ getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALS
       download.file(paste0(mortFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
     }
   }
-  return(todir)
+  message("Files located in ", todir)
 }
 
 
@@ -77,12 +80,21 @@ getlinkedNHIS <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALS
 
 getNHISdata <- function(begin = 1986, finish = 2004, todir = NULL){
   dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
-  for(i in seq(years))
-    if(years[i] %in% 1990:1996){
-      lf1 <- getURL(paste0(dataFTP, "1990-96_Family_Income/"),ftp.use.epsv = FALSE, dirlistonly = TRUE )
+  years <- seq(begin, finish, by=1)
+dataFold <- getURL(dataFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE, crlf=TRUE)
+dataFold <- unlist(strsplit(dataFold, "\r*\n"))
+dataFolders <- sapply(years, function(x) {grep(x, dataFold, fixed=TRUE, value=TRUE)})
+incFolders <- grep("income", dataFold, ignore.case=TRUE, value=TRUE)
+incFolders <- grep(paste(paste0(substr(years, 3, 4), "_"), collapse="|"), incFolders, value=TRUE)
+    logicalYears <- years %in% 1990:1996
+    logicalSubs <- years %in% 1997:2004
+    if(any(logicalYears)){
+      lf1 <- getURL(paste0(dataFTP, "1990-96_Family_Income/"), ftp.use.epsv = FALSE, dirlistonly = TRUE )
       lf1 <- unlist(strsplit(lf1, "\r*\n"))
       lf1 <- grep("[^\\.txt]$", lf1, value=TRUE)
-    } else if(years[i] %in% 1997:2004){
+      lf1[logicalYears]
+    } 
+    if(any(logicalSubs)){
       lf2 <- inc[grep("9[7-9]_|0[0-4]_", inc)]
       lflinks <- paste0(dataFTP, lf2, "/")
       files <- lapply(lflinks, FUN= function(y){ getURL(y, ftp.use.epsv=FALSE, dirlistonly=TRUE)})
@@ -196,9 +208,9 @@ for (l in seq(dllinks)){
 
 # Income Files ------------------------------------------------------------
 
-svyyrs <- yrs
-inc <- grep("income", dataFold, ignore.case=TRUE, value=TRUE)
-inc <- grep(paste(paste0(substr(svyyrs, 3, 4), "_"), collapse="|"), inc, value=TRUE)
+svyyrs <- years
+incFolders <- grep("income", dataFold, ignore.case=TRUE, value=TRUE)
+incFolders <- grep(paste(paste0(substr(svyyrs, 3, 4), "_"), collapse="|"), incFolders, value=TRUE)
 inc1 <- inc[!grepl("94_|96_I", inc, ignore.case=TRUE)]
 # inc2 <- inc[grepl("94_|96_I", inc, ignore.case=TRUE)]
 
