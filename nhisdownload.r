@@ -9,8 +9,6 @@ library(foreign)
 library(data.table)
 library(downloader)
 # devtools::install_github("hadley/readr")
-# Disable use of Internet Explorer for internet access
-setInternet2(use=FALSE)
 
 mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
 dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
@@ -19,14 +17,25 @@ questFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Survey_Questionnaires/
 dsetdocFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/NHIS/"
 listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
 listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-datFiles <- unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)}))
+datFiles <- grep("^NHIS", listFiles, value = TRUE)
+# datFiles <- unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)}))
 
 years <- seq(1997, 2003)
 # exclude 2004
-# years <- years[-length(years)]
- dlnames <- datFiles[sapply(years, function(x){grep(x, datFiles)})]
+dlnames <- sapply(years, function(x){grep(x, datFiles, value = TRUE)})
 
 tomatch <- c("person", "household", "family", "samadult")
+
+.getNHISdat <- function(dataURL, years) {
+  listFiles <- getURL(dataURL, ftp.use.epsv = FALSE, dirlistonly = TRUE)
+  listFiles <- unlist(strsplit(listFiles, "\r*\n"))
+  nhisFiles <- grep("^NHIS", listFiles, value = TRUE)
+  datFiles <- grep("\\.dat$", nhisFiles, value = TRUE)
+  datFiles <- sapply(years, function(year) {
+    grep(year, datFiles, fixed = TRUE, value = TRUE)
+  })
+  return(datFiles)
+}
 
 #' Download NHIS data from the CDC FTP site. 
 #' @param begin integer Data collection year beginning from 1986
@@ -36,18 +45,14 @@ tomatch <- c("person", "household", "family", "samadult")
 #' @export 
 #' @examples
 #' getMortality(begin=1990, finish=2000, todir = "./mydirectory", docs = TRUE)
-getMortality <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE){
+getMortality <- function(begin = 1986, finish = 2009, todir = NULL, docs = FALSE){
   if(!is.numeric(begin)|!is.numeric(finish)){
     stop("Survey years must be four digit numbers!")
-  } else if(begin < 1986 | finish > 2004){
+  } else if(begin < 1986 | finish > 2009){
     stop("Years outside of survey collection period!")
   }
-  mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
-  listFiles <- getURL(mortFTP, ftp.use.epsv = FALSE, dirlistonly = TRUE)
-  listFiles <- unlist(strsplit(listFiles, "\r*\n"))
-  datFiles <- unlist(lapply(listFiles, function(x){grep("NHIS", x, value=TRUE)}))
   yrs <- seq(begin, finish, by=1)
-  dlnames <- sapply(yrs, function(x){grep(x, datFiles, fixed = TRUE, value = TRUE)})
+  datFiles <- .getNHISdat(mortFTP, yrs)
   # check directory path and create if non-existent
   if(!is.null(todir)){
     if(!class(todir)=="character"){
@@ -56,12 +61,15 @@ getMortality <- function(begin = 1986, finish = 2004, todir = NULL, docs = FALSE
       cat("Directory does not exist >> creating one...")
       dir.create(todir, recursive=TRUE)
     }
-    
-  } else { todir <- getwd() }
+  } else {
+    todir <- getwd()
+  }
   # download documentation if TRUE
   if(docs){
-    download.file(file.path(mortFTP,"archived_files","nhis_readme_mortality_2010.txt"), 
-                  destfile = file.path(todir, "nhis_readme_mortality_2010.txt"), method="auto", mode="wb", quiet = FALSE)
+    download.file(file.path(
+      mortFTP,"archived_files","nhis_readme_mortality_2010.txt"),
+      destfile = file.path(todir, "nhis_readme_mortality_2010.txt"),
+      method="auto", mode="wb", quiet = FALSE)
   }
   # simple check for valid years
   if(identical(begin, finish)){
