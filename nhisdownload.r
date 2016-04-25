@@ -1,6 +1,7 @@
 # National Health Interview Survey download script
 # Set working directory
 
+# devtools::install_github("hadley/readr")
 # Load dependencies
 library(RCurl)
 library(SAScii)
@@ -8,7 +9,6 @@ library(readr)
 library(foreign)
 library(data.table)
 library(downloader)
-# devtools::install_github("hadley/readr")
 
 mortFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
 dataFTP <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHIS/"
@@ -22,7 +22,6 @@ datFiles <- grep("^NHIS", listFiles, value = TRUE)
 
 years <- seq(1997, 2003)
 # exclude 2004
-dlnames <- sapply(years, function(x){grep(x, datFiles, value = TRUE)})
 
 tomatch <- c("person", "household", "family", "samadult")
 
@@ -72,15 +71,11 @@ getMortality <- function(begin = 1986, finish = 2009, todir = NULL, docs = FALSE
       method="auto", mode="wb", quiet = FALSE)
   }
   # simple check for valid years
-  if(identical(begin, finish)){
-    dfile <- grep(begin, datFiles, value=TRUE)
-    download.file(paste0(mortFTP,dfile), destfile = file.path(todir, dfile), method = "auto", quiet = FALSE)
-  } else {
-    for (i in seq(dlnames)){
-      download.file(paste0(mortFTP,dlnames[i]), destfile = file.path(todir, dlnames[i]), method="auto", quiet = FALSE)
-    }
+  for (i in seq_along(datFiles)) {
+    download.file(paste0(mortFTP, datFiles[i]),
+                  destfile = file.path(todir, datFiles[i]),
+                  method = "auto", quiet = FALSE)
   }
-  message("Files located in ", todir)
 }
 
 
